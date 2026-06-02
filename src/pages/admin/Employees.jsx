@@ -35,15 +35,17 @@ export default function AdminEmployees() {
   };
 
   const deactivate = async (id, name) => {
+    if (!id || id === 'undefined') return toast.error('Invalid employee ID');
     if (!window.confirm(`Deactivate ${name}?`)) return;
     try {
       await api.delete(`/users/${id}`);
-      setEmployees(prev => prev.map(e => e._id === id ? { ...e, isActive:false } : e));
+      setEmployees(prev => prev.map(e => (e._id === id || e.id === id) ? { ...e, isActive:false } : e));
       toast.success('Deactivated');
     } catch { toast.error('Failed'); }
   };
 
   const resetPassword = async (id, name) => {
+    if (!id || id === 'undefined') return toast.error('Invalid employee ID');
     if (!window.confirm(`Reset ${name}'s password to Welcome@123?`)) return;
     try { await api.post(`/users/${id}/reset-password`); toast.success('Password reset to Welcome@123'); }
     catch { toast.error('Failed'); }
@@ -108,8 +110,10 @@ export default function AdminEmployees() {
         </div>
       ) : (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:16 }}>
-          {filtered.map(emp => (
-            <div key={emp._id} className="card" style={{ opacity: emp.isActive ? 1 : 0.5 }}>
+          {filtered.map(emp => {
+            const empId = emp._id || emp.id;
+            return (
+            <div key={empId} className="card" style={{ opacity: emp.isActive ? 1 : 0.5 }}>
               <div style={{ display:'flex', alignItems:'flex-start', gap:12, marginBottom:12 }}>
                 <div style={{ width:44, height:44, borderRadius:12, background:'rgba(57,255,20,0.1)', border:'1px solid rgba(57,255,20,0.2)', display:'flex', alignItems:'center', justifyContent:'center', color:'#39ff14', fontWeight:700, fontSize:18, flexShrink:0 }}>
                   {emp.name[0]}
@@ -128,11 +132,12 @@ export default function AdminEmployees() {
                 <p>📞 {emp.phone}</p>
               </div>
               <div style={{ display:'flex', gap:8 }}>
-                <button onClick={() => resetPassword(emp._id, emp.name)} className="btn-secondary" style={{ flex:1, fontSize:11, padding:'7px 10px' }}>🔄 Reset Pass</button>
-                {emp.isActive && <button onClick={() => deactivate(emp._id, emp.name)} className="btn-danger" style={{ fontSize:11, padding:'7px 12px' }}>🗑</button>}
+                <button onClick={() => resetPassword(empId, emp.name)} className="btn-secondary" style={{ flex:1, fontSize:11, padding:'7px 10px' }}>🔄 Reset Pass</button>
+                {emp.isActive && <button onClick={() => deactivate(empId, emp.name)} className="btn-danger" style={{ fontSize:11, padding:'7px 12px' }}>🗑</button>}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
