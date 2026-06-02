@@ -4,10 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const NAV = [
-  { to: '/founder',            label: 'Overview',   icon: '📊', end: true },
-  { to: '/founder/tasks',      label: 'My Tasks',   icon: '✅' },
-  { to: '/founder/attendance', label: 'Attendance', icon: '📅' },
-  { to: '/founder/employees',  label: 'Employees',  icon: '👥' },
+  { to: '/founder',            label: 'Overview',      icon: '📊', end: true },
+  { to: '/founder/tasks',      label: 'My Tasks',      icon: '✅' },
+  { to: '/founder/team',       label: 'Founders Team', icon: '👥' },
+  { to: '/founder/attendance', label: 'Attendance',    icon: '📅' },
+  { to: '/founder/employees',  label: 'Employees',     icon: '🧑‍�' },
 ];
 
 function LiveTime() {

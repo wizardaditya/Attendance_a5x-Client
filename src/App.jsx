@@ -14,6 +14,7 @@ import EmployeeProfile from './pages/employee/Profile';
 import FounderLayout from './layouts/FounderLayout';
 import FounderOverview from './pages/founder/Overview';
 import FounderTasks from './pages/founder/FounderTasks';
+import FounderTeam from './pages/founder/FounderTeam';
 import FounderAttendance from './pages/founder/FounderAttendance';
 import FounderEmployees from './pages/founder/FounderEmployees';
 
@@ -66,6 +67,7 @@ function AppRoutes() {
       <Route path="/founder" element={<ProtectedRoute founderOnly><FounderLayout /></ProtectedRoute>}>
         <Route index element={<FounderOverview />} />
         <Route path="tasks" element={<FounderTasks />} />
+        <Route path="team" element={<FounderTeam />} />
         <Route path="attendance" element={<FounderAttendance />} />
         <Route path="employees" element={<FounderEmployees />} />
       </Route>
