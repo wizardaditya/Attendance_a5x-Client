@@ -26,7 +26,7 @@ export default function AdminAttendance() {
   const saveEdit = async (id) => {
     try {
       const res = await api.patch(`/attendance/${id}`, editData);
-      setRecords(prev => prev.map(r => r.id === id ? res.data : r));
+      setRecords(prev => prev.map(r => (r._id === id || r.id === id) ? { ...res.data, id: res.data._id || res.data.id } : r));
       setEditId(null); toast.success('Updated');
     } catch { toast.error('Update failed'); }
   };
@@ -83,24 +83,26 @@ export default function AdminAttendance() {
               <tr><td colSpan={9} style={{ textAlign:'center', padding:48, color:'#6b7280' }}>Loading...</td></tr>
             ) : records.length === 0 ? (
               <tr><td colSpan={9} style={{ textAlign:'center', padding:48, color:'#6b7280' }}>No records found</td></tr>
-            ) : records.map(r => (
-              <tr key={r.id} style={{ borderBottom:'1px solid #0f0f0f' }}>
+            ) : records.map(r => {
+              const rowId = r._id || r.id;
+              return (
+              <tr key={rowId} style={{ borderBottom:'1px solid #0f0f0f' }}>
                 <td style={{ padding:'12px 16px', color:'#fff', fontWeight:500, whiteSpace:'nowrap' }}>{r.userName}</td>
                 <td style={{ padding:'12px 16px', color:'#9ca3af' }}>{r.department}</td>
                 <td style={{ padding:'12px 16px', color:'#9ca3af' }}>{r.date}</td>
                 <td style={{ padding:'12px 16px', color:'#39ff14' }}>
-                  {editId === r.id
+                  {editId === rowId
                     ? <input type="time" defaultValue={r.checkIn ? new Date(r.checkIn).toTimeString().slice(0,5) : ''} onChange={e => setEditData(p => ({ ...p, checkIn:e.target.value }))} className="input" style={{ padding:'4px 8px', fontSize:12, width:110 }} />
                     : r.checkIn ? new Date(r.checkIn).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : '—'}
                 </td>
                 <td style={{ padding:'12px 16px', color:'#9ca3af' }}>
-                  {editId === r.id
+                  {editId === rowId
                     ? <input type="time" defaultValue={r.checkOut ? new Date(r.checkOut).toTimeString().slice(0,5) : ''} onChange={e => setEditData(p => ({ ...p, checkOut:e.target.value }))} className="input" style={{ padding:'4px 8px', fontSize:12, width:110 }} />
                     : r.checkOut ? new Date(r.checkOut).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : '—'}
                 </td>
                 <td style={{ padding:'12px 16px', color:'#9ca3af' }}>{r.duration ? `${Math.floor(r.duration/60)}h ${r.duration%60}m` : '—'}</td>
                 <td style={{ padding:'12px 16px' }}>
-                  {editId === r.id
+                  {editId === rowId
                     ? <select defaultValue={r.status} onChange={e => setEditData(p => ({ ...p, status:e.target.value }))} className="input" style={{ padding:'4px 8px', fontSize:12, width:110 }}>
                         {['PRESENT','LATE','ABSENT','WFH','HALF_DAY'].map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
@@ -108,15 +110,16 @@ export default function AdminAttendance() {
                 </td>
                 <td style={{ padding:'12px 16px', color:'#9ca3af', maxWidth:120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.location || '—'}</td>
                 <td style={{ padding:'12px 16px' }}>
-                  {editId === r.id
+                  {editId === rowId
                     ? <div style={{ display:'flex', gap:8 }}>
-                        <button onClick={() => saveEdit(r.id)} style={{ background:'none', border:'none', color:'#39ff14', cursor:'pointer', fontSize:16 }}>✓</button>
+                        <button onClick={() => saveEdit(rowId)} style={{ background:'none', border:'none', color:'#39ff14', cursor:'pointer', fontSize:16 }}>✓</button>
                         <button onClick={() => setEditId(null)} style={{ background:'none', border:'none', color:'#f87171', cursor:'pointer', fontSize:16 }}>✕</button>
                       </div>
-                    : <button onClick={() => { setEditId(r.id); setEditData({}); }} style={{ background:'none', border:'none', color:'#6b7280', cursor:'pointer', fontSize:14 }}>✏️</button>}
+                    : <button onClick={() => { setEditId(rowId); setEditData({}); }} style={{ background:'none', border:'none', color:'#6b7280', cursor:'pointer', fontSize:14 }}>✏️</button>}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

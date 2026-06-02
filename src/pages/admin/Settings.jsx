@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 
@@ -6,12 +6,43 @@ export default function AdminSettings() {
   const [office, setOffice] = useState({ officeName:'A5X Industries', address:'Mumbai, Maharashtra, India', startTime:'09:00', endTime:'18:00', gracePeriod:30, timezone:'Asia/Kolkata', workDays:'Mon-Sat' });
   const [pw, setPw] = useState({ currentPassword:'', newPassword:'', confirmPassword:'' });
   const [saving, setSaving] = useState(false);
+  const [loadingSettings, setLoadingSettings] = useState(true);
 
-  const saveOffice = () => toast.success('Settings saved!');
+  // Load settings from DB on mount
+  useEffect(() => {
+    api.get('/settings')
+      .then(r => {
+        const s = r.data;
+        setOffice({
+          officeName:  s.officeName  || 'A5X Industries',
+          address:     s.address     || 'Mumbai, Maharashtra, India',
+          startTime:   s.startTime   || '09:00',
+          endTime:     s.endTime     || '18:00',
+          gracePeriod: s.gracePeriod ?? 30,
+          timezone:    s.timezone    || 'Asia/Kolkata',
+          workDays:    s.workDays    || 'Mon-Sat',
+        });
+      })
+      .catch(() => toast.error('Could not load settings'))
+      .finally(() => setLoadingSettings(false));
+  }, []);
+
+  const saveOffice = async () => {
+    setSaving(true);
+    try {
+      await api.post('/settings', office);
+      toast.success('Settings saved!');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const changePw = async (e) => {
     e.preventDefault();
     if (pw.newPassword !== pw.confirmPassword) { toast.error('Passwords do not match'); return; }
+    if (pw.newPassword.length < 6) { toast.error('Password must be at least 6 characters'); return; }
     setSaving(true);
     try {
       await api.post('/auth/change-password', { currentPassword:pw.currentPassword, newPassword:pw.newPassword });
@@ -30,6 +61,12 @@ export default function AdminSettings() {
     </div>
   );
 
+  if (loadingSettings) return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:200 }}>
+      <div style={{ color:'#6b7280' }}>Loading settings...</div>
+    </div>
+  );
+
   return (
     <div style={{ maxWidth:640 }}>
       <h1 style={{ fontSize:22, fontWeight:800, color:'#fff', marginBottom:4 }}>Settings</h1>
@@ -37,37 +74,65 @@ export default function AdminSettings() {
 
       <Section icon="🏢" title="Office Configuration">
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
-          {[['officeName','Office Name'],['timezone','Timezone']].map(([k,l]) => (
-            <div key={k}>
-              <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>{l}</label>
-              {k === 'timezone'
-                ? <select value={office[k]} onChange={e => setOffice(p => ({ ...p, [k]:e.target.value }))} className="input">
-                    <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-                    <option value="UTC">UTC</option>
-                    <option value="America/New_York">America/New_York</option>
-                  </select>
-                : <input value={office[k]} onChange={e => setOffice(p => ({ ...p, [k]:e.target.value }))} className="input" />}
-            </div>
-          ))}
+          <div>
+            <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>Office Name</label>
+            <input value={office.officeName} onChange={e => setOffice(p => ({ ...p, officeName:e.target.value }))} className="input" />
+          </div>
+          <div>
+            <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>Timezone</label>
+            <select value={office.timezone} onChange={e => setOffice(p => ({ ...p, timezone:e.target.value }))} className="input">
+              <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+              <option value="UTC">UTC</option>
+              <option value="America/New_York">America/New_York</option>
+              <option value="Europe/London">Europe/London</option>
+            </select>
+          </div>
         </div>
+
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
-          {[['startTime','Work Start','time'],['endTime','Work End','time'],['gracePeriod','Grace Period (min)','number'],['workDays','Work Days','select']].map(([k,l,t]) => (
-            <div key={k}>
-              <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>{l}</label>
-              {t === 'select'
-                ? <select value={office[k]} onChange={e => setOffice(p => ({ ...p, [k]:e.target.value }))} className="input">
-                    <option value="Mon-Fri">Monday – Friday</option>
-                    <option value="Mon-Sat">Monday – Saturday</option>
-                  </select>
-                : <input type={t} value={office[k]} onChange={e => setOffice(p => ({ ...p, [k]:e.target.value }))} className="input" />}
-            </div>
-          ))}
+          <div>
+            <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>Work Start</label>
+            <input type="time" value={office.startTime} onChange={e => setOffice(p => ({ ...p, startTime:e.target.value }))} className="input" />
+          </div>
+          <div>
+            <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>Work End</label>
+            <input type="time" value={office.endTime} onChange={e => setOffice(p => ({ ...p, endTime:e.target.value }))} className="input" />
+          </div>
+          <div>
+            <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>Grace Period (min)</label>
+            <input type="number" min="0" max="120" value={office.gracePeriod} onChange={e => setOffice(p => ({ ...p, gracePeriod:Number(e.target.value) }))} className="input" />
+          </div>
+          <div>
+            <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>Work Days</label>
+            <select value={office.workDays} onChange={e => setOffice(p => ({ ...p, workDays:e.target.value }))} className="input">
+              <option value="Mon-Fri">Monday – Friday</option>
+              <option value="Mon-Sat">Monday – Saturday</option>
+              <option value="Mon-Sun">Monday – Sunday</option>
+            </select>
+          </div>
         </div>
+
         <div style={{ marginBottom:16 }}>
           <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>Office Address</label>
-          <input value={office.address} onChange={e => setOffice(p => ({ ...p, address:e.target.value }))} className="input" />
+          <input value={office.address} onChange={e => setOffice(p => ({ ...p, address:e.target.value }))} className="input" placeholder="Office address" />
         </div>
-        <button onClick={saveOffice} className="btn-primary" style={{ fontSize:13 }}>💾 Save Settings</button>
+
+        {/* Preview - late arrival threshold */}
+        <div style={{ background:'rgba(57,255,20,0.05)', border:'1px solid rgba(57,255,20,0.15)', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:12, color:'#9ca3af' }}>
+          ⏰ Employees checking in after <span style={{ color:'#39ff14', fontWeight:600 }}>
+            {(() => {
+              const [h, m] = office.startTime.split(':').map(Number);
+              const total = h * 60 + m + Number(office.gracePeriod);
+              const hh = Math.floor(total / 60) % 24;
+              const mm = total % 60;
+              return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+            })()}
+          </span> will be marked as <span style={{ color:'#f5e642', fontWeight:600 }}>LATE</span>
+        </div>
+
+        <button onClick={saveOffice} disabled={saving} className="btn-primary" style={{ fontSize:13 }}>
+          {saving ? 'Saving...' : '💾 Save Settings'}
+        </button>
       </Section>
 
       <Section icon="🔐" title="Change Password">
@@ -76,16 +141,23 @@ export default function AdminSettings() {
             <input key={k} type="password" value={pw[k]} onChange={e => setPw(p => ({ ...p, [k]:e.target.value }))} className="input" placeholder={ph} required style={{ marginBottom:12 }} />
           ))}
           <button type="submit" disabled={saving} className="btn-primary" style={{ fontSize:13 }}>
-            {saving ? <span className="animate-spin" style={{ display:'inline-block', width:16, height:16, border:'2px solid #000', borderTopColor:'transparent', borderRadius:'50%' }} /> : '🔐 Update Password'}
+            {saving ? 'Updating...' : '🔐 Update Password'}
           </button>
         </form>
       </Section>
 
       <Section icon="ℹ️" title="System Info">
-        {[['App Name','WorkSyne'],['Company','A5X Industries'],['Version','1.0.0'],['QR Refresh','Every 24 hours'],['Auth','JWT (7 day tokens)']].map(([k,v]) => (
+        {[
+          ['App Name','WorkSyne'],
+          ['Company', office.officeName],
+          ['Version','1.0.0'],
+          ['Work Hours', `${office.startTime} – ${office.endTime}`],
+          ['Late After', `${office.gracePeriod} min grace period`],
+          ['Auth','JWT (7 day tokens)'],
+        ].map(([k,v]) => (
           <div key={k} style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:10 }}>
             <span style={{ color:'#6b7280' }}>{k}</span>
-            <span style={{ color: k === 'Version' ? '#39ff14' : '#fff', fontWeight:500 }}>{v}</span>
+            <span style={{ color:'#39ff14', fontWeight:500 }}>{v}</span>
           </div>
         ))}
       </Section>
