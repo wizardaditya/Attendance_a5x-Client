@@ -114,7 +114,14 @@ export default function AdminSettings() {
 
         <div style={{ marginBottom:16 }}>
           <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>Office Address</label>
-          <input value={office.address} onChange={e => setOffice(p => ({ ...p, address:e.target.value }))} className="input" placeholder="Office address" />
+          <textarea
+            value={office.address}
+            onChange={e => setOffice(p => ({ ...p, address: e.target.value }))}
+            className="input"
+            placeholder="Office address"
+            rows={2}
+            style={{ resize:'vertical', minHeight:44 }}
+          />
         </div>
 
         {/* Preview - late arrival threshold */}
