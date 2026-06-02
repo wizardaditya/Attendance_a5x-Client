@@ -24,6 +24,7 @@ export default function CheckInPage() {
   const navigate = useNavigate();
   const { user, login } = useAuth();
   const token = searchParams.get('token');
+  const qrType = (searchParams.get('type') || 'checkin').toUpperCase(); // CHECKIN or CHECKOUT
 
   const [step, setStep] = useState('init');
   const [location, setLocation] = useState('');
@@ -58,11 +59,31 @@ export default function CheckInPage() {
   const checkTodayStatus = async () => {
     try {
       const res = await api.get('/attendance/today');
+      
+      // CHECKOUT QR - only show checkout
+      if (qrType === 'CHECKOUT') {
+        if (!res.data || !res.data.checkIn) {
+          setStep('wrong-qr'); // not checked in yet, can't checkout
+        } else if (res.data.checkOut) {
+          setAttendance(res.data);
+          setStep('done'); // already done
+        } else {
+          setAttendance(res.data);
+          setStep('checkout'); // ready to checkout
+        }
+        return;
+      }
+
+      // CHECKIN QR - only show checkin
       if (res.data) {
         setAttendance(res.data);
-        setStep(res.data.checkOut ? 'done' : 'checkout');
+        if (res.data.checkOut) {
+          setStep('done'); // fully done
+        } else if (res.data.checkIn) {
+          setStep('already-checkedin'); // already checked in, don't show checkout
+        }
       } else {
-        setStep('checkin');
+        setStep('checkin'); // ready to checkin
       }
     } catch { setStep('checkin'); }
   };
@@ -87,11 +108,12 @@ export default function CheckInPage() {
       });
       setAttendance(res.data.attendance);
       setStep('success');
-      setTimeout(() => setStep('checkout'), 3000);
+      // After success, show already-checkedin (not checkout - that needs checkout QR)
+      setTimeout(() => setStep('already-checkedin'), 3000);
     } catch (err) {
       if (err.response?.data?.alreadyCheckedIn) {
         setAttendance(err.response.data.attendance);
-        setStep('checkout');
+        setStep('already-checkedin');
       } else {
         toast.error(err.response?.data?.error || 'Check-in failed');
       }
@@ -176,6 +198,12 @@ export default function CheckInPage() {
         {location && (
           <div style={S.location}>
             <span>📍</span><span>{location}</span>
+            {qrType === 'CHECKOUT' && (
+              <span style={{ background:'rgba(59,130,246,0.15)', color:'#3b82f6', fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:20, marginLeft:4 }}>CHECK-OUT</span>
+            )}
+            {qrType === 'CHECKIN' && (
+              <span style={{ background:'rgba(57,255,20,0.1)', color:'#39ff14', fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:20, marginLeft:4 }}>CHECK-IN</span>
+            )}
           </div>
         )}
 
@@ -190,6 +218,33 @@ export default function CheckInPage() {
                 {loading ? <span className="animate-spin" style={{ display:'inline-block', width:16, height:16, border:'2px solid #000', borderTopColor:'transparent', borderRadius:'50%' }} /> : 'Continue →'}
               </button>
             </form>
+          </div>
+        )}
+
+        {/* ALREADY CHECKED IN (shown after checkin QR scan post check-in) */}
+        {step === 'already-checkedin' && user && (
+          <div className="card" style={{ textAlign:'center', border:'1px solid rgba(57,255,20,0.3)' }}>
+            <div style={{ fontSize:56, marginBottom:12 }}>✅</div>
+            <h3 style={{ color:'#39ff14', fontSize:20, fontWeight:800 }}>Already Checked In!</h3>
+            <p style={{ color:'#9ca3af', fontSize:13, marginTop:8 }}>{user.name}</p>
+            <p style={{ color:'#6b7280', fontSize:12, marginTop:4 }}>
+              Checked in at {attendance?.checkIn ? new Date(attendance.checkIn).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : '—'}
+            </p>
+            <div style={{ background:'rgba(57,255,20,0.05)', border:'1px solid rgba(57,255,20,0.15)', borderRadius:8, padding:12, marginTop:16 }}>
+              <p style={{ color:'#9ca3af', fontSize:12 }}>To check out, scan the <strong style={{ color:'#3b82f6' }}>Check-Out QR</strong> at the end of the day.</p>
+            </div>
+          </div>
+        )}
+
+        {/* WRONG QR - tried checkout QR without checkin */}
+        {step === 'wrong-qr' && (
+          <div className="card" style={{ textAlign:'center', border:'1px solid rgba(239,68,68,0.3)' }}>
+            <div style={{ fontSize:56, marginBottom:12 }}>⚠️</div>
+            <h3 style={{ color:'#f87171', fontSize:18, fontWeight:800 }}>Not Checked In Yet</h3>
+            <p style={{ color:'#9ca3af', fontSize:13, marginTop:8 }}>You need to check in first before using the Check-Out QR.</p>
+            <div style={{ background:'rgba(239,68,68,0.05)', border:'1px solid rgba(239,68,68,0.15)', borderRadius:8, padding:12, marginTop:16 }}>
+              <p style={{ color:'#9ca3af', fontSize:12 }}>Please scan the <strong style={{ color:'#39ff14' }}>Check-In QR</strong> first.</p>
+            </div>
           </div>
         )}
 
