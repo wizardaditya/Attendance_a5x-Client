@@ -36,12 +36,12 @@ export default function AdminEmployees() {
 
   const deactivate = async (id, name) => {
     if (!id || id === 'undefined') return toast.error('Invalid employee ID');
-    if (!window.confirm(`Deactivate ${name}?`)) return;
+    if (!window.confirm(`Permanently delete ${name}? This cannot be undone.`)) return;
     try {
       await api.delete(`/users/${id}`);
-      setEmployees(prev => prev.map(e => (e._id === id || e.id === id) ? { ...e, isActive:false } : e));
-      toast.success('Deactivated');
-    } catch { toast.error('Failed'); }
+      setEmployees(prev => prev.filter(e => (e._id !== id && e.id !== id)));
+      toast.success(`${name} removed permanently`);
+    } catch { toast.error('Failed to delete employee'); }
   };
 
   const resetPassword = async (id, name) => {
@@ -133,7 +133,7 @@ export default function AdminEmployees() {
               </div>
               <div style={{ display:'flex', gap:8 }}>
                 <button onClick={() => resetPassword(empId, emp.name)} className="btn-secondary" style={{ flex:1, fontSize:11, padding:'7px 10px' }}>🔄 Reset Pass</button>
-                {emp.isActive && <button onClick={() => deactivate(empId, emp.name)} className="btn-danger" style={{ fontSize:11, padding:'7px 12px' }}>🗑</button>}
+                <button onClick={() => deactivate(empId, emp.name)} className="btn-danger" style={{ fontSize:11, padding:'7px 12px' }}>🗑 Delete</button>
               </div>
             </div>
             );
