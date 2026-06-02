@@ -168,6 +168,28 @@ export default function AdminSettings() {
           </div>
         ))}
       </Section>
+
+      <Section icon="🧹" title="Database Cleanup">
+        <p style={{ fontSize:13, color:'#9ca3af', marginBottom:16 }}>
+          Remove all inactive/deleted users from MongoDB Atlas and clean up their orphaned attendance records.
+          This keeps the database lean and fast.
+        </p>
+        <button
+          onClick={async () => {
+            if (!window.confirm('Permanently remove all inactive users and their data from the database?')) return;
+            try {
+              const res = await api.delete('/users/cleanup/inactive');
+              toast.success(`Cleanup done: ${res.data.usersDeleted} users, ${res.data.attendanceOrphansDeleted} attendance records removed`);
+            } catch (err) {
+              toast.error(err.response?.data?.error || 'Cleanup failed');
+            }
+          }}
+          className="btn-danger"
+          style={{ fontSize:13 }}
+        >
+          🧹 Clean Up Inactive Users
+        </button>
+      </Section>
     </div>
   );
 }
