@@ -1,10 +1,69 @@
-import { useState, useEffect, useCallback } from 'react';
-import api from '../../lib/api';
+import { useState, useEffect, useCallback } from 'react';import api from '../../lib/api';
 import toast from 'react-hot-toast';
 
 const TEAM_COLORS = ['#39ff14','#3b82f6','#f5e642','#f87171','#a78bfa','#fb923c','#34d399','#f472b6'];
 
-const INIT_FORM = { name:'', department:'', description:'', color:'#39ff14', members:[], lead:'' };
+const INIT_FORM = { name:'', department:'', description:'', color:'#39ff14', members:[], lead:'', memberMode:'department' };
+// memberMode: 'department' = pick from one dept | 'individual' = pick anyone cross-dept
+
+// Cross-department individual picker with dept filter
+function IndividualPicker({ users, departments, selected, color, onChange }) {
+  const [deptFilter, setDeptFilter] = useState('');
+  const shown = deptFilter ? users.filter(u => u.department === deptFilter && u.isActive) : users.filter(u => u.isActive);
+
+  return (
+    <div>
+      <div style={{ display:'flex', gap:8, marginBottom:8, flexWrap:'wrap' }}>
+        <button type="button" onClick={() => setDeptFilter('')}
+          style={{ padding:'4px 10px', borderRadius:999, fontSize:11, fontWeight:600, border: deptFilter === '' ? `1px solid ${color}` : '1px solid #2a2a2a', background: deptFilter === '' ? `${color}15` : '#1a1a1a', color: deptFilter === '' ? color : '#9ca3af', cursor:'pointer' }}>
+          All
+        </button>
+        {departments.map(d => (
+          <button key={d} type="button" onClick={() => setDeptFilter(d)}
+            style={{ padding:'4px 10px', borderRadius:999, fontSize:11, fontWeight:600, border: deptFilter === d ? `1px solid ${color}` : '1px solid #2a2a2a', background: deptFilter === d ? `${color}15` : '#1a1a1a', color: deptFilter === d ? color : '#9ca3af', cursor:'pointer' }}>
+            {d}
+          </button>
+        ))}
+      </div>
+      <div style={{ maxHeight:220, overflowY:'auto', background:'#0a0a0a', borderRadius:10, border:'1px solid #1a1a1a', padding:8 }}>
+        {/* Select All shown */}
+        <label style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 8px', borderBottom:'1px solid #1a1a1a', marginBottom:4, cursor:'pointer' }}>
+          <input type="checkbox"
+            checked={shown.length > 0 && shown.every(u => selected.includes(u._id || u.id))}
+            onChange={e => {
+              const ids = shown.map(u => u._id || u.id);
+              if (e.target.checked) {
+                onChange([...new Set([...selected, ...ids])]);
+              } else {
+                onChange(selected.filter(id => !ids.includes(id)));
+              }
+            }}
+            style={{ accentColor: color, width:14, height:14 }}
+          />
+          <span style={{ fontSize:12, color:'#9ca3af', fontWeight:600 }}>Select All shown ({shown.length})</span>
+        </label>
+        {shown.map(u => {
+          const uid = u._id || u.id;
+          return (
+            <label key={uid} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 8px', borderRadius:8, cursor:'pointer' }}>
+              <input type="checkbox"
+                checked={selected.includes(uid)}
+                onChange={e => onChange(e.target.checked ? [...selected, uid] : selected.filter(id => id !== uid))}
+                style={{ accentColor: color, width:14, height:14 }}
+              />
+              <div style={{ width:26, height:26, borderRadius:'50%', background:`${color}20`, display:'flex', alignItems:'center', justifyContent:'center', color, fontWeight:700, fontSize:11 }}>{u.name[0]}</div>
+              <div>
+                <p style={{ fontSize:13, color:'#d1d5db' }}>{u.name}</p>
+                <p style={{ fontSize:10, color:'#6b7280' }}>{u.designation} · <span style={{ color:'#60a5fa' }}>{u.department}</span></p>
+              </div>
+            </label>
+          );
+        })}
+        {shown.length === 0 && <p style={{ fontSize:12, color:'#6b7280', textAlign:'center', padding:12 }}>No employees found</p>}
+      </div>
+    </div>
+  );
+}
 
 export default function AdminTeams() {
   const [teams,       setTeams]       = useState([]);
@@ -32,7 +91,7 @@ export default function AdminTeams() {
   const deptUsers = (dept) => users.filter(u => u.department === dept);
 
   const openCreate = () => { setForm(INIT_FORM); setEditTeam(null); setShowCreate(true); };
-  const openEdit   = (team) => {
+  const openEdit = (team) => {
     setForm({
       name:        team.name,
       department:  team.department,
@@ -40,6 +99,7 @@ export default function AdminTeams() {
       color:       team.color || '#39ff14',
       members:     team.members.map(m => m._id || m.id),
       lead:        team.lead?._id || team.lead?.id || '',
+      memberMode:  'individual', // edit mode always shows all users
     });
     setEditTeam(team);
     setShowCreate(true);
@@ -278,69 +338,101 @@ export default function AdminTeams() {
                 </div>
               </div>
 
-              {/* Members */}
-              {form.department && (
-                <>
-                  <div style={{ marginBottom:14 }}>
-                    <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:8 }}>
-                      Members — {form.department}
-                      <span style={{ color:'#6b7280', fontWeight:400 }}> ({form.members.length} selected)</span>
-                    </label>
-                    {deptUsers(form.department).length === 0 ? (
-                      <p style={{ fontSize:12, color:'#f87171' }}>No active employees in {form.department}</p>
-                    ) : (
-                      <div style={{ maxHeight:180, overflowY:'auto', background:'#0a0a0a', borderRadius:10, border:'1px solid #1a1a1a', padding:8 }}>
-                        {/* Select All */}
-                        <label style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 8px', borderBottom:'1px solid #1a1a1a', marginBottom:4, cursor:'pointer' }}>
-                          <input type="checkbox"
-                            checked={deptUsers(form.department).every(u => form.members.includes(u._id || u.id))}
-                            onChange={e => {
-                              const ids = deptUsers(form.department).map(u => u._id || u.id);
-                              setForm(p => ({ ...p, members: e.target.checked ? ids : [] }));
-                            }}
-                            style={{ accentColor: form.color, width:14, height:14 }}
-                          />
-                          <span style={{ fontSize:12, color:'#9ca3af', fontWeight:600 }}>Select All</span>
-                        </label>
-                        {deptUsers(form.department).map(u => {
-                          const uid = u._id || u.id;
-                          return (
-                            <label key={uid} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 8px', borderRadius:8, cursor:'pointer' }}>
-                              <input type="checkbox"
-                                checked={form.members.includes(uid)}
-                                onChange={e => setForm(p => ({ ...p, members: e.target.checked ? [...p.members, uid] : p.members.filter(id => id !== uid) }))}
-                                style={{ accentColor: form.color, width:14, height:14 }}
-                              />
-                              <div style={{ width:26, height:26, borderRadius:'50%', background:`${form.color}20`, display:'flex', alignItems:'center', justifyContent:'center', color: form.color, fontWeight:700, fontSize:11 }}>
-                                {u.name[0]}
-                              </div>
-                              <div>
-                                <p style={{ fontSize:13, color:'#d1d5db' }}>{u.name}</p>
-                                <p style={{ fontSize:10, color:'#6b7280' }}>{u.designation}</p>
-                              </div>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+              {/* Member mode toggle */}
+              <div style={{ marginBottom:14 }}>
+                <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:8 }}>Member Selection Mode</label>
+                <div style={{ display:'flex', gap:8 }}>
+                  {[['department','🏢 By Department'],['individual','👤 Individual (cross-dept)']].map(([val, label]) => (
+                    <button key={val} type="button"
+                      onClick={() => setForm(p => ({ ...p, memberMode: val, members: [], lead: '' }))}
+                      style={{
+                        flex:1, padding:'8px 10px', borderRadius:10, fontSize:12, fontWeight:600,
+                        border: form.memberMode === val ? `1px solid ${form.color}` : '1px solid #2a2a2a',
+                        background: form.memberMode === val ? `${form.color}15` : '#1a1a1a',
+                        color: form.memberMode === val ? form.color : '#9ca3af',
+                        cursor:'pointer',
+                      }}>{label}</button>
+                  ))}
+                </div>
+              </div>
 
-                  {/* Team Lead */}
-                  {form.members.length > 0 && (
-                    <div style={{ marginBottom:16 }}>
-                      <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>Team Lead (optional)</label>
-                      <select value={form.lead} onChange={e => setForm(p => ({ ...p, lead: e.target.value }))} className="input">
-                        <option value="">No lead assigned</option>
-                        {deptUsers(form.department).filter(u => form.members.includes(u._id || u.id)).map(u => (
-                          <option key={u._id || u.id} value={u._id || u.id}>{u.name}</option>
-                        ))}
-                      </select>
+              {/* DEPARTMENT MODE */}
+              {form.memberMode === 'department' && form.department && (
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:8 }}>
+                    Members from <strong style={{ color:'#fff' }}>{form.department}</strong>
+                    <span style={{ color:'#6b7280', fontWeight:400 }}> ({form.members.length} selected)</span>
+                  </label>
+                  {deptUsers(form.department).length === 0 ? (
+                    <p style={{ fontSize:12, color:'#f87171' }}>No active employees in {form.department}</p>
+                  ) : (
+                    <div style={{ maxHeight:200, overflowY:'auto', background:'#0a0a0a', borderRadius:10, border:'1px solid #1a1a1a', padding:8 }}>
+                      <label style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 8px', borderBottom:'1px solid #1a1a1a', marginBottom:4, cursor:'pointer' }}>
+                        <input type="checkbox"
+                          checked={deptUsers(form.department).length > 0 && deptUsers(form.department).every(u => form.members.includes(u._id || u.id))}
+                          onChange={e => {
+                            const ids = deptUsers(form.department).map(u => u._id || u.id);
+                            setForm(p => ({ ...p, members: e.target.checked ? ids : [] }));
+                          }}
+                          style={{ accentColor: form.color, width:14, height:14 }}
+                        />
+                        <span style={{ fontSize:12, color:'#9ca3af', fontWeight:600 }}>Select All ({deptUsers(form.department).length})</span>
+                      </label>
+                      {deptUsers(form.department).map(u => {
+                        const uid = u._id || u.id;
+                        return (
+                          <label key={uid} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 8px', borderRadius:8, cursor:'pointer' }}>
+                            <input type="checkbox"
+                              checked={form.members.includes(uid)}
+                              onChange={e => setForm(p => ({ ...p, members: e.target.checked ? [...p.members, uid] : p.members.filter(id => id !== uid) }))}
+                              style={{ accentColor: form.color, width:14, height:14 }}
+                            />
+                            <div style={{ width:26, height:26, borderRadius:'50%', background:`${form.color}20`, display:'flex', alignItems:'center', justifyContent:'center', color: form.color, fontWeight:700, fontSize:11 }}>{u.name[0]}</div>
+                            <div>
+                              <p style={{ fontSize:13, color:'#d1d5db' }}>{u.name}</p>
+                              <p style={{ fontSize:10, color:'#6b7280' }}>{u.designation} · {u.department}</p>
+                            </div>
+                          </label>
+                        );
+                      })}
                     </div>
                   )}
-                </>
+                </div>
               )}
 
-              {/* Actions */}
+              {/* INDIVIDUAL MODE - cross department */}
+              {form.memberMode === 'individual' && (
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:8 }}>
+                    Add Members
+                    <span style={{ color:'#6b7280', fontWeight:400 }}> ({form.members.length} selected)</span>
+                  </label>
+
+                  {/* Filter by dept */}
+                  {departments.length > 0 && (
+                    <IndividualPicker
+                      users={users}
+                      departments={departments}
+                      selected={form.members}
+                      color={form.color}
+                      onChange={members => setForm(p => ({ ...p, members }))}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Team Lead - shown when members are selected */}
+              {form.members.length > 0 && (
+                <div style={{ marginBottom:16 }}>
+                  <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>Team Lead (optional)</label>
+                  <select value={form.lead} onChange={e => setForm(p => ({ ...p, lead: e.target.value }))} className="input">
+                    <option value="">No lead assigned</option>
+                    {users.filter(u => form.members.includes(u._id || u.id)).map(u => (
+                      <option key={u._id || u.id} value={u._id || u.id}>{u.name} · {u.department}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div style={{ display:'flex', gap:12 }}>
                 <button type="submit" disabled={saving} className="btn-primary" style={{ flex:1 }}>
                   {saving ? <span className="animate-spin" style={{ display:'inline-block', width:16, height:16, border:'2px solid #000', borderTopColor:'transparent', borderRadius:'50%' }} /> : editTeam ? 'Save Changes' : 'Create Team'}
