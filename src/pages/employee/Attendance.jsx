@@ -25,23 +25,10 @@ export default function EmployeeAttendance() {
     totalMins: records.reduce((a, r) => a + (r.duration || 0), 0),
   };
 
-  const exportCSV = () => {
-    const rows = [['Date','Check In','Check Out','Duration','Status','Location'],
-      ...records.map(r => [r.date,
-        r.checkIn ? new Date(r.checkIn).toLocaleTimeString('en-IN') : '-',
-        r.checkOut ? new Date(r.checkOut).toLocaleTimeString('en-IN') : '-',
-        r.duration ? `${Math.floor(r.duration/60)}h ${r.duration%60}m` : '-',
-        r.status, r.location || '-'])
-    ];
-    const blob = new Blob([rows.map(r => r.join(',')).join('\n')], { type:'text/csv' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'my-attendance.csv'; a.click();
-  };
-
   return (
     <div style={{ padding:16 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+      <div style={{ marginBottom:16 }}>
         <h1 style={{ fontSize:20, fontWeight:800, color:'#fff' }}>My Attendance</h1>
-        <button onClick={exportCSV} className="btn-secondary" style={{ fontSize:11, padding:'7px 12px' }}>⬇ Export</button>
       </div>
 
       {/* Stats */}

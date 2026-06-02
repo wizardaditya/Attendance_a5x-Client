@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../lib/api';
+import socket from '../../lib/socket';
 import toast from 'react-hot-toast';
 
 const COLS = ['TODO','IN_PROGRESS','IN_REVIEW','DONE'];
@@ -40,6 +41,20 @@ export default function AdminTasks() {
     api.get('/users').then(r => setUsers(r.data.filter(u => u.role === 'EMPLOYEE' && u.isActive))).catch(() => {});
     api.get('/users/departments').then(r => setDepts(r.data)).catch(() => {});
     api.get('/tasks/department-summary').then(r => setDeptSummary(r.data)).catch(() => {});
+
+    // Listen for employee task completions
+    socket.connect();
+    socket.on('task:completed', (data) => {
+      toast.success(`✅ ${data.completedBy} completed "${data.taskTitle}"`, { duration: 5000 });
+      loadTasks(); // refresh task board
+      api.get('/tasks/department-summary').then(r => setDeptSummary(r.data)).catch(() => {});
+    });
+    socket.on('task:updated', () => { loadTasks(); });
+
+    return () => {
+      socket.off('task:completed');
+      socket.off('task:updated');
+    };
   }, []);
 
   const loadTasks = (params = {}) => {
