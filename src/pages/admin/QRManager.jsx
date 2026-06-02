@@ -67,12 +67,21 @@ export default function AdminQR() {
   };
 
   const invalidate = async (id) => {
-    if (!window.confirm('Invalidate this QR code?')) return;
+    if (!window.confirm('Deactivate this QR code? It will become inactive but stay in the list.')) return;
     try {
-      await api.delete(`/qr/${id}`);
-      setQrCodes(prev => prev.map(q => (q._id||q.id) === id ? { ...q, isActive:false } : q));
-      toast.success('QR invalidated');
+      const res = await api.delete(`/qr/${id}`);
+      setQrCodes(prev => prev.map(q => (q._id||q.id) === id ? { ...q, isActive: false } : q));
+      toast.success('QR deactivated');
     } catch { toast.error('Failed'); }
+  };
+
+  const deleteQR = async (id) => {
+    if (!window.confirm('Permanently delete this QR code? This cannot be undone.')) return;
+    try {
+      await api.delete(`/qr/${id}/permanent`);
+      setQrCodes(prev => prev.filter(q => (q._id||q.id) !== id));
+      toast.success('QR deleted permanently');
+    } catch { toast.error('Failed to delete'); }
   };
 
   const downloadQR = (qr) => {
@@ -120,10 +129,24 @@ export default function AdminQR() {
           <p style={{ fontSize:12, color:'#6b7280' }}>Scans: <span style={{ color: typeColor(qr.type), fontWeight:600 }}>{qr.scanCount}</span></p>
         </div>
         {/* Actions */}
-        <div style={{ display:'flex', gap:8, marginBottom:12 }}>
-          <button onClick={() => downloadQR(qr)} className="btn-secondary" style={{ flex:1, fontSize:12, padding:'8px 12px' }}>⬇ Download</button>
-          {qr.isActive && !qr.isAuto && <button onClick={() => regenerate(id)} className="btn-secondary" style={{ fontSize:12, padding:'8px 12px' }}>🔄</button>}
-          <button onClick={() => invalidate(id)} className="btn-danger" style={{ fontSize:12, padding:'8px 12px' }}>🗑</button>
+        <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap' }}>
+          <button onClick={() => downloadQR(qr)} className="btn-secondary" style={{ flex:1, fontSize:12, padding:'8px 10px' }}>⬇ Download</button>
+          {!qr.isAuto && qr.isActive && (
+            <button onClick={() => regenerate(id)} className="btn-secondary" style={{ fontSize:12, padding:'8px 10px' }} title="Regenerate token">🔄</button>
+          )}
+          {qr.isActive && (
+            <button onClick={() => invalidate(id)} style={{ fontSize:12, padding:'8px 10px', background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.3)', color:'#fbbf24', borderRadius:12, cursor:'pointer', fontWeight:600 }} title="Deactivate (keep record)">
+              ⏸ Inactive
+            </button>
+          )}
+          {!qr.isActive && (
+            <button onClick={() => regenerate(id)} className="btn-secondary" style={{ fontSize:12, padding:'8px 10px' }} title="Reactivate with new token">
+              ▶ Activate
+            </button>
+          )}
+          <button onClick={() => deleteQR(id)} className="btn-danger" style={{ fontSize:12, padding:'8px 10px' }} title="Delete permanently">
+            🗑
+          </button>
         </div>
         <div style={{ background:'#0a0a0a', borderRadius:8, padding:8 }}>
           <p style={{ fontSize:10, color:'#4b5563', wordBreak:'break-all' }}>{qr.url}</p>
