@@ -40,8 +40,21 @@ function ProtectedRoute({ children, adminOnly = false, founderOnly = false }) {
   const { user, loading } = useAuth();
   if (loading) return <Spinner />;
   if (!user) return <Navigate to="/login" replace />;
-  if (adminOnly && user.role !== 'ADMIN') return <Navigate to={user.role === 'FOUNDER' ? '/founder' : '/employee'} replace />;
-  if (founderOnly && user.role !== 'FOUNDER') return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/employee'} replace />;
+
+  const role = user.role;
+
+  // Admin-only route: only ADMIN allowed
+  if (adminOnly && role !== 'ADMIN')
+    return <Navigate to={role === 'FOUNDER' ? '/founder' : '/employee'} replace />;
+
+  // Founder-only route: only FOUNDER allowed
+  if (founderOnly && role !== 'FOUNDER')
+    return <Navigate to={role === 'ADMIN' ? '/admin' : '/employee'} replace />;
+
+  // Employee route: FOUNDER and ADMIN should NOT be here
+  if (!adminOnly && !founderOnly && (role === 'ADMIN' || role === 'FOUNDER'))
+    return <Navigate to={role === 'ADMIN' ? '/admin' : '/founder'} replace />;
+
   return children;
 }
 
