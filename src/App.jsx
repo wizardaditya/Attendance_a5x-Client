@@ -15,6 +15,7 @@ import AdminLayout from './layouts/AdminLayout';
 import AdminHome from './pages/admin/Home';
 import AdminAttendance from './pages/admin/Attendance';
 import AdminTasks from './pages/admin/Tasks';
+import AdminTeams from './pages/admin/Teams';
 import AdminEmployees from './pages/admin/Employees';
 import AdminQR from './pages/admin/QRManager';
 import AdminAnnouncements from './pages/admin/Announcements';
@@ -57,6 +58,7 @@ function AppRoutes() {
         <Route index element={<AdminHome />} />
         <Route path="attendance" element={<AdminAttendance />} />
         <Route path="tasks" element={<AdminTasks />} />
+        <Route path="teams" element={<AdminTeams />} />
         <Route path="employees" element={<AdminEmployees />} />
         <Route path="qr" element={<AdminQR />} />
         <Route path="announcements" element={<AdminAnnouncements />} />

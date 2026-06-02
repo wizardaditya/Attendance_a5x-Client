@@ -11,15 +11,17 @@ const PRI_ICONS = { URGENT:'🔴', HIGH:'🟠', MEDIUM:'🟡', LOW:'🟢' };
 
 const INIT_FORM = {
   title:'', description:'', priority:'MEDIUM', dueDate:'', estimatedDur:'',
-  assignMode:'individuals',   // 'department' | 'individuals'
+  assignMode:'individuals',   // 'department' | 'individuals' | 'team'
   department:'',
-  assignedTo:[],              // user IDs for individuals mode
+  assignedTo:[],
+  teamId:'',                  // team ID for team mode
 };
 
 export default function AdminTasks() {
   const [tasks, setTasks]           = useState([]);
   const [users, setUsers]           = useState([]);
   const [departments, setDepts]     = useState([]);
+  const [teams, setTeams]           = useState([]);
   const [loading, setLoading]       = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm]             = useState(INIT_FORM);
@@ -41,6 +43,7 @@ export default function AdminTasks() {
     api.get('/users').then(r => setUsers(r.data.filter(u => u.role === 'EMPLOYEE' && u.isActive))).catch(() => {});
     api.get('/users/departments').then(r => setDepts(r.data)).catch(() => {});
     api.get('/tasks/department-summary').then(r => setDeptSummary(r.data)).catch(() => {});
+    api.get('/teams').then(r => setTeams(r.data)).catch(() => {});
 
     // Listen for employee task completions
     socket.connect();
@@ -79,7 +82,12 @@ export default function AdminTasks() {
 
   const createTask = async (e) => {
     e.preventDefault();
-    if (!form.department) { toast.error('Please select a department'); return; }
+    if (form.assignMode === 'team' && !form.teamId) {
+      toast.error('Please select a team'); return;
+    }
+    if (!form.assignMode !== 'team' && !form.department) {
+      toast.error('Please select a department'); return;
+    }
     if (form.assignMode === 'individuals' && form.assignedTo.length === 0) {
       toast.error('Select at least one person to assign'); return;
     }
@@ -341,12 +349,12 @@ export default function AdminTasks() {
               {form.department && (
                 <div style={{ marginBottom:16 }}>
                   <label style={{ display:'block', fontSize:11, color:'#9ca3af', marginBottom:8 }}>Assign To</label>
-                  <div style={{ display:'flex', gap:8, marginBottom:12 }}>
-                    {[['individuals','👤 Specific People'],['department','🏢 Entire Department']].map(([val,label]) => (
+                  <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap' }}>
+                    {[['individuals','👤 Specific People'],['department','🏢 Entire Dept'],['team','👥 A Team']].map(([val,label]) => (
                       <button key={val} type="button"
-                        onClick={() => setForm(p => ({ ...p, assignMode:val, assignedTo:[] }))}
+                        onClick={() => setForm(p => ({ ...p, assignMode:val, assignedTo:[], teamId:'' }))}
                         style={{
-                          flex:1, padding:'8px 12px', borderRadius:10, fontSize:12, fontWeight:600,
+                          flex:1, minWidth:80, padding:'8px 10px', borderRadius:10, fontSize:12, fontWeight:600,
                           border: form.assignMode===val ? '1px solid #39ff14' : '1px solid #2a2a2a',
                           background: form.assignMode===val ? 'rgba(57,255,20,0.1)' : '#1a1a1a',
                           color: form.assignMode===val ? '#39ff14' : '#9ca3af',
@@ -356,6 +364,34 @@ export default function AdminTasks() {
                       </button>
                     ))}
                   </div>
+
+                  {/* TEAM MODE */}
+                  {form.assignMode === 'team' && (
+                    <div>
+                      {teams.filter(t => t.department === form.department).length === 0 ? (
+                        <div style={{ background:'rgba(245,230,66,0.05)', border:'1px solid rgba(245,230,66,0.2)', borderRadius:10, padding:12 }}>
+                          <p style={{ fontSize:12, color:'#f5e642' }}>⚠️ No teams in {form.department}. Create a team first from the Teams page.</p>
+                        </div>
+                      ) : (
+                        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                          {teams.filter(t => t.department === form.department).map(team => (
+                            <label key={team._id || team.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background: form.teamId === (team._id || team.id) ? 'rgba(57,255,20,0.05)' : '#0a0a0a', borderRadius:10, border: form.teamId === (team._id || team.id) ? `1px solid ${team.color || '#39ff14'}44` : '1px solid #1a1a1a', cursor:'pointer' }}>
+                              <input type="radio" name="teamSelect" value={team._id || team.id}
+                                checked={form.teamId === (team._id || team.id)}
+                                onChange={() => setForm(p => ({ ...p, teamId: team._id || team.id }))}
+                                style={{ accentColor: team.color || '#39ff14' }}
+                              />
+                              <div style={{ width:10, height:10, borderRadius:'50%', background: team.color || '#39ff14', flexShrink:0 }} />
+                              <div style={{ flex:1 }}>
+                                <p style={{ fontSize:13, color:'#fff', fontWeight:600 }}>{team.name}</p>
+                                <p style={{ fontSize:11, color:'#6b7280' }}>{team.members.length} members{team.lead ? ` · Lead: ${team.lead.name}` : ''}</p>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Entire department info */}
                   {form.assignMode === 'department' && (
