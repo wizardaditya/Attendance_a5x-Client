@@ -88,7 +88,7 @@ export default function AdminEmployees() {
               </select>
               <select value={form.role} onChange={e => setForm(p => ({ ...p, role:e.target.value }))} className="input" style={{ marginBottom:8 }}>
                 <option value="EMPLOYEE">Employee</option>
-                <option value="MANAGER">Manager</option>
+                <option value="FOUNDER">Founder</option>
                 <option value="ADMIN">Admin</option>
               </select>
               <p style={{ fontSize:12, color:'#6b7280', marginBottom:16 }}>Default password: <span style={{ color:'#39ff14' }}>Welcome@123</span></p>
@@ -122,6 +122,8 @@ export default function AdminEmployees() {
                   <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
                     <h3 style={{ color:'#fff', fontWeight:700, fontSize:14, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{emp.name}</h3>
                     {!emp.isActive && <span className="badge-red">Inactive</span>}
+                    {emp.role === 'FOUNDER' && <span style={{ fontSize:10, color:'#f5e642', background:'rgba(245,230,66,0.1)', padding:'2px 7px', borderRadius:999, border:'1px solid rgba(245,230,66,0.2)', fontWeight:700 }}>FOUNDER</span>}
+                    {emp.role === 'ADMIN' && <span style={{ fontSize:10, color:'#3b82f6', background:'rgba(59,130,246,0.1)', padding:'2px 7px', borderRadius:999, border:'1px solid rgba(59,130,246,0.2)', fontWeight:700 }}>ADMIN</span>}
                   </div>
                   <p style={{ fontSize:11, color:'#6b7280', marginTop:2 }}>{emp.designation}</p>
                 </div>

@@ -11,6 +11,12 @@ import EmployeeTasks from './pages/employee/Tasks';
 import EmployeeAttendance from './pages/employee/Attendance';
 import EmployeeProfile from './pages/employee/Profile';
 
+import FounderLayout from './layouts/FounderLayout';
+import FounderOverview from './pages/founder/Overview';
+import FounderTasks from './pages/founder/FounderTasks';
+import FounderAttendance from './pages/founder/FounderAttendance';
+import FounderEmployees from './pages/founder/FounderEmployees';
+
 import AdminLayout from './layouts/AdminLayout';
 import AdminHome from './pages/admin/Home';
 import AdminAttendance from './pages/admin/Attendance';
@@ -29,11 +35,12 @@ function Spinner() {
   );
 }
 
-function ProtectedRoute({ children, adminOnly = false }) {
+function ProtectedRoute({ children, adminOnly = false, founderOnly = false }) {
   const { user, loading } = useAuth();
   if (loading) return <Spinner />;
   if (!user) return <Navigate to="/login" replace />;
-  if (adminOnly && user.role === 'EMPLOYEE') return <Navigate to="/employee" replace />;
+  if (adminOnly && user.role !== 'ADMIN') return <Navigate to={user.role === 'FOUNDER' ? '/founder' : '/employee'} replace />;
+  if (founderOnly && user.role !== 'FOUNDER') return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/employee'} replace />;
   return children;
 }
 
@@ -43,7 +50,9 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={
-        user ? <Navigate to={user.role === 'ADMIN' ? '/admin' : '/employee'} replace /> : <LoginPage />
+        user
+          ? <Navigate to={user.role === 'ADMIN' ? '/admin' : user.role === 'FOUNDER' ? '/founder' : '/employee'} replace />
+          : <LoginPage />
       } />
       <Route path="/checkin" element={<CheckInPage />} />
 
@@ -52,6 +61,13 @@ function AppRoutes() {
         <Route path="tasks" element={<EmployeeTasks />} />
         <Route path="attendance" element={<EmployeeAttendance />} />
         <Route path="profile" element={<EmployeeProfile />} />
+      </Route>
+
+      <Route path="/founder" element={<ProtectedRoute founderOnly><FounderLayout /></ProtectedRoute>}>
+        <Route index element={<FounderOverview />} />
+        <Route path="tasks" element={<FounderTasks />} />
+        <Route path="attendance" element={<FounderAttendance />} />
+        <Route path="employees" element={<FounderEmployees />} />
       </Route>
 
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
@@ -66,7 +82,7 @@ function AppRoutes() {
       </Route>
 
       <Route path="/" element={
-        <Navigate to={user ? (user.role === 'ADMIN' ? '/admin' : '/employee') : '/login'} replace />
+        <Navigate to={user ? (user.role === 'ADMIN' ? '/admin' : user.role === 'FOUNDER' ? '/founder' : '/employee') : '/login'} replace />
       } />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
