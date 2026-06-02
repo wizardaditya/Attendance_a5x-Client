@@ -1,10 +1,13 @@
 import axios from 'axios';
 
 // In development, Vite proxies /api → http://localhost:3001
-// In production, set VITE_API_URL to your backend URL (e.g. https://worksyne-api.onrender.com)
+// In production, VITE_API_URL must point to the backend (e.g. https://attendance-a5x-server.onrender.com)
+const PROD_API = 'https://attendance-a5x-server.onrender.com';
 const baseURL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
-  : '/api';
+  : import.meta.env.MODE === 'production'
+    ? `${PROD_API}/api`
+    : '/api';
 
 const api = axios.create({
   baseURL,
