@@ -8,7 +8,7 @@ const baseURL = import.meta.env.VITE_API_URL
 
 const api = axios.create({
   baseURL,
-  timeout: 15000,
+  timeout: 30000, // 30s — Render free tier wakes from sleep slowly
 });
 
 api.interceptors.request.use((config) => {
