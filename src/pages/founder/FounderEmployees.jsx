@@ -13,7 +13,7 @@ export default function FounderEmployees() {
   const [filters,     setFilters]     = useState({ department:'', status:'', assignedTo:'' });
 
   useEffect(() => {
-    api.get('/users').then(r => setUsers(r.data.filter(u => u.role === 'EMPLOYEE' && u.isActive))).catch(() => {});
+    api.get('/founder/all-users').then(r => setUsers(r.data.filter(u => u.role === 'EMPLOYEE' && u.isActive !== false))).catch(() => {});
     api.get('/users/departments').then(r => setDepartments(r.data)).catch(() => {});
   }, []);
 
