@@ -43,12 +43,19 @@ export default function FounderTasks() {
     return () => socket.off('founder:task-shared');
   }, []);
 
+  const isOwner = (task) => {
+    const cid = task.createdBy?._id?.toString?.() || task.createdBy?.id?.toString?.() || task.createdBy?.toString?.();
+    const uid = user?._id?.toString?.() || user?.id?.toString?.();
+    return !!(cid && uid && cid === uid);
+  };
+
   const filtered = tasks.filter(t => {
-    if (filter === 'mine')   return (t.createdBy?._id || t.createdBy?.id || t.createdBy) === (user?._id || user?.id);
-    if (filter === 'shared') return t.isShared;
-    if (filter === 'done')   return t.status === 'DONE';
+    const mine = isOwner(t);
+    if (filter === 'mine')    return mine;
+    if (filter === 'shared')  return t.isShared && !mine; // shared WITH me, not by me
+    if (filter === 'done')    return t.status === 'DONE';
     if (filter === 'pending') return t.status !== 'DONE';
-    return true;
+    return true; // 'all'
   });
 
   const handleCreate = async (e) => {
@@ -97,12 +104,6 @@ export default function FounderTasks() {
       setShareForm({ founderId:'', note:'', assign: false });
       toast.success('Task shared!');
     } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
-  };
-
-  const isOwner = (task) => {
-    const cid = task.createdBy?._id || task.createdBy?.id || task.createdBy?.toString?.();
-    const uid = user?._id || user?.id;
-    return cid === uid;
   };
 
   return (
