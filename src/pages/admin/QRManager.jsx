@@ -7,7 +7,7 @@ export default function AdminQR() {
   const [qrCodes, setQrCodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ location:'', department:'' });
+  const [form, setForm] = useState({ location:'', department:'', type:'MANUAL' });
   const [creating, setCreating] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [settings, setSettings] = useState(null);
@@ -51,8 +51,12 @@ export default function AdminQR() {
     e.preventDefault(); setCreating(true);
     try {
       const res = await api.post('/qr/generate', form);
-      setQrCodes(prev => [res.data, ...prev]);
-      setShowCreate(false); setForm({ location:'', department:'' });
+      setQrCodes(prev => {
+        // Remove any existing QR of same type (frontend cleanup)
+        const filtered = prev.filter(q => q.type !== res.data.type || q.isAuto !== false);
+        return [res.data, ...filtered];
+      });
+      setShowCreate(false); setForm({ location:'', department:'', type:'MANUAL' });
       toast.success('QR code generated!');
     } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
     finally { setCreating(false); }
@@ -196,6 +200,20 @@ export default function AdminQR() {
           <div className="card-glow" style={{ width:'100%', maxWidth:420 }}>
             <h2 style={{ fontSize:16, fontWeight:700, color:'#fff', marginBottom:20 }}>Generate Manual QR Code</h2>
             <form onSubmit={createQR}>
+              <div style={{ marginBottom:14 }}>
+                <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>QR Type</label>
+                <div style={{ display:'flex', gap:8 }}>
+                  {[['CHECKIN','🟢 Check-In'],['CHECKOUT','🔵 Check-Out'],['MANUAL','⚪ Manual']].map(([val, label]) => (
+                    <button key={val} type="button" onClick={() => setForm(p => ({ ...p, type: val }))}
+                      style={{ flex:1, padding:'8px 6px', borderRadius:10, fontSize:12, fontWeight:600, cursor:'pointer',
+                        border: form.type === val ? `1px solid ${val === 'CHECKIN' ? '#39ff14' : val === 'CHECKOUT' ? '#3b82f6' : '#9ca3af'}` : '1px solid #2a2a2a',
+                        background: form.type === val ? `${val === 'CHECKIN' ? 'rgba(57,255,20,0.1)' : val === 'CHECKOUT' ? 'rgba(59,130,246,0.1)' : 'rgba(156,163,175,0.1)'}` : '#1a1a1a',
+                        color: form.type === val ? (val === 'CHECKIN' ? '#39ff14' : val === 'CHECKOUT' ? '#3b82f6' : '#fff') : '#9ca3af',
+                      }}>{label}</button>
+                  ))}
+                </div>
+                <p style={{ fontSize:11, color:'#6b7280', marginTop:6 }}>Only one active QR per type — existing will be deleted.</p>
+              </div>
               <div style={{ marginBottom:14 }}>
                 <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>Office Location / Zone</label>
                 <input value={form.location} onChange={e => setForm(p => ({ ...p, location:e.target.value }))} className="input" placeholder="e.g. Main Office, Floor 2" required />
