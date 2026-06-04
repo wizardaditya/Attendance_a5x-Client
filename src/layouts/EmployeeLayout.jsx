@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import socket from '../lib/socket';
 
 const TABS = [
   { to: '/employee',            label: 'Home',       icon: '🏠', end: true },
@@ -15,6 +17,86 @@ export default function EmployeeLayout() {
   const navigate = useNavigate();
 
   const handleLogout = () => { logout(); toast.success('Logged out'); navigate('/login'); };
+
+  // ── Real-time notifications via Socket.io ──────────────────────────────────
+  useEffect(() => {
+    // New announcement
+    const onAnnouncement = (ann) => {
+      toast(
+        (t) => (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', maxWidth: 280 }}>
+            <span style={{ fontSize: 22, flexShrink: 0 }}>📢</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#fff', marginBottom: 2 }}>
+                {ann.title}
+              </div>
+              <div style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.4 }}>
+                {ann.body?.length > 80 ? ann.body.slice(0, 80) + '…' : ann.body}
+              </div>
+            </div>
+          </div>
+        ),
+        {
+          duration: 6000,
+          style: {
+            background: '#1a1a1a',
+            border: '1px solid #39ff14',
+            borderRadius: 14,
+            padding: '12px 16px',
+            color: '#fff',
+          },
+          icon: null,
+        }
+      );
+    };
+
+    // New task assigned
+    const onTaskCreated = (task) => {
+      // Only show if this user is assigned
+      const isAssigned = task.assignedTo?.some(
+        (id) => (typeof id === 'object' ? id._id : id)?.toString() === user?._id?.toString()
+      );
+      if (!isAssigned) return;
+
+      toast(
+        (t) => (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', maxWidth: 280 }}>
+            <span style={{ fontSize: 22, flexShrink: 0 }}>📋</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#fff', marginBottom: 2 }}>
+                New Task: {task.title}
+              </div>
+              <div style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.4 }}>
+                Priority: {task.priority} · Due: {task.dueDate
+                  ? new Date(task.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                  : 'No due date'}
+              </div>
+            </div>
+          </div>
+        ),
+        {
+          duration: 6000,
+          style: {
+            background: '#1a1a1a',
+            border: '1px solid #39ff14',
+            borderRadius: 14,
+            padding: '12px 16px',
+            color: '#fff',
+          },
+          icon: null,
+        }
+      );
+    };
+
+    socket.on('announcement:new', onAnnouncement);
+    socket.on('task:created',     onTaskCreated);
+
+    return () => {
+      socket.off('announcement:new', onAnnouncement);
+      socket.off('task:created',     onTaskCreated);
+    };
+  }, [user]);
+  // ──────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="emp-shell">

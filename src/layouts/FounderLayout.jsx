@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import socket from '../lib/socket';
 
 const NAV = [
   { to: '/founder',            label: 'Overview',      icon: '📊', end: true },
@@ -31,6 +32,47 @@ export default function FounderLayout() {
   }, []);
 
   const handleLogout = () => { logout(); toast.success('Logged out'); navigate('/login'); };
+
+  // ── Real-time notifications ──────────────────────────────────────────
+  useEffect(() => {
+    const onTaskCompleted = (data) => {
+      toast(
+        () => (
+          <div style={{ display:'flex', gap:10, alignItems:'flex-start', maxWidth:280 }}>
+            <span style={{ fontSize:22, flexShrink:0 }}>✅</span>
+            <div>
+              <div style={{ fontWeight:700, fontSize:13, color:'#fff', marginBottom:2 }}>Task Completed</div>
+              <div style={{ fontSize:11, color:'#9ca3af', lineHeight:1.4 }}>
+                <strong style={{ color:'#f5e642' }}>{data.completedBy}</strong> completed "{data.taskTitle}"
+              </div>
+            </div>
+          </div>
+        ),
+        { duration:6000, style:{ background:'#1a1a1a', border:'1px solid #f5e642', borderRadius:14, padding:'12px 16px', color:'#fff' }, icon:null }
+      );
+    };
+    const onAnnouncement = (ann) => {
+      toast(
+        () => (
+          <div style={{ display:'flex', gap:10, alignItems:'flex-start', maxWidth:280 }}>
+            <span style={{ fontSize:22, flexShrink:0 }}>📢</span>
+            <div>
+              <div style={{ fontWeight:700, fontSize:13, color:'#fff', marginBottom:2 }}>{ann.title}</div>
+              <div style={{ fontSize:11, color:'#9ca3af' }}>{ann.body?.length > 60 ? ann.body.slice(0,60)+'…' : ann.body}</div>
+            </div>
+          </div>
+        ),
+        { duration:6000, style:{ background:'#1a1a1a', border:'1px solid #f5e642', borderRadius:14, padding:'12px 16px', color:'#fff' }, icon:null }
+      );
+    };
+    socket.on('task:completed',   onTaskCompleted);
+    socket.on('announcement:new', onAnnouncement);
+    return () => {
+      socket.off('task:completed',   onTaskCompleted);
+      socket.off('announcement:new', onAnnouncement);
+    };
+  }, []);
+  // ────────────────────────────────────────────────────────────────────
 
   const SidebarContent = ({ mobile = false }) => (
     <div style={{ display:'flex', flexDirection:'column', height:'100%', background:'#0d0d0d', borderRight:'1px solid #1a1a1a', width: mobile ? 240 : 220 }}>
