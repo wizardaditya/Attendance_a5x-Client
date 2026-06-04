@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../lib/api';
 import socket from '../lib/socket';
+import { initPushNotifications, removePushSubscription } from '../lib/push';
 
 const AuthContext = createContext(null);
 
@@ -21,6 +22,8 @@ export function AuthProvider({ children }) {
           setUser(res.data);
           localStorage.setItem('worksyne_user', JSON.stringify(res.data));
           socket.connect();
+          // Init push after token is set
+          initPushNotifications().catch(() => {});
         })
         .catch(() => {
           localStorage.removeItem('worksyne_token');
@@ -40,10 +43,13 @@ export function AuthProvider({ children }) {
     localStorage.setItem('worksyne_user', JSON.stringify(userData));
     setUser(userData);
     socket.connect();
+    // Init push after login
+    initPushNotifications().catch(() => {});
     return userData;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await removePushSubscription().catch(() => {});
     localStorage.removeItem('worksyne_token');
     localStorage.removeItem('worksyne_user');
     setUser(null);
