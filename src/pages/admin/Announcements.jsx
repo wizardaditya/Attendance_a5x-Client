@@ -3,22 +3,11 @@ import api from '../../lib/api';
 import toast from 'react-hot-toast';
 
 export default function AdminAnnouncements() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [items,      setItems]      = useState([]);
+  const [loading,    setLoading]    = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-
-  // Helper: get current local datetime string for datetime-local input
-  const nowLocalStr = () => {
-    const now = new Date();
-    now.setSeconds(0, 0);
-    return now.toISOString().slice(0, 16);
-  };
-
-  const [form, setForm] = useState({
-    title: '', body: '', targetDept: '', pinned: false,
-    priority: 'GENERAL', publishAt: '', expiresAt: '',
-  });
-  const [creating, setCreating] = useState(false);
+  const [form,       setForm]       = useState({ title: '', body: '', targetDept: '', pinned: false, priority: 'GENERAL' });
+  const [creating,   setCreating]   = useState(false);
   const [departments, setDepartments] = useState([]);
 
   useEffect(() => {
@@ -26,27 +15,29 @@ export default function AdminAnnouncements() {
     api.get('/users/departments').then(r => setDepartments(r.data)).catch(() => {});
   }, []);
 
-  // ── fix: empty string → null for optional date fields
   const create = async (e) => {
-    e.preventDefault(); setCreating(true);
+    e.preventDefault();
+    setCreating(true);
     try {
-      const payload = {
+      // Always publish immediately — no start/end date
+      const res = await api.post('/announcements', {
         ...form,
-        publishAt: form.publishAt || null,
-        expiresAt: form.expiresAt || null,
-      };
-      const res = await api.post('/announcements', payload);
+        publishAt: new Date().toISOString(),
+        expiresAt: null,
+      });
       setItems(prev => [res.data, ...prev]);
       setShowCreate(false);
-      setForm({ title: '', body: '', targetDept: '', pinned: false, priority: 'GENERAL', publishAt: nowLocalStr(), expiresAt: '' });
-      toast.success('Announcement posted!');
-    } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
-    finally { setCreating(false); }
+      setForm({ title: '', body: '', targetDept: '', pinned: false, priority: 'GENERAL' });
+      toast.success('Announcement posted & emails sent!');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed');
+    } finally {
+      setCreating(false);
+    }
   };
 
   const del = async (ann) => {
     if (!window.confirm('Delete this announcement?')) return;
-    // use _id if id is not present
     const id = ann._id || ann.id;
     try {
       await api.delete(`/announcements/${id}`);
@@ -65,12 +56,9 @@ export default function AdminAnnouncements() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 4 }}>Announcements</h1>
-          <p style={{ fontSize: 13, color: '#6b7280' }}>Broadcast messages to your team</p>
+          <p style={{ fontSize: 13, color: '#6b7280' }}>Post goes live instantly · emails sent to all relevant users</p>
         </div>
-        <button onClick={() => {
-          setForm({ title: '', body: '', targetDept: '', pinned: false, priority: 'GENERAL', publishAt: nowLocalStr(), expiresAt: '' });
-          setShowCreate(true);
-        }} className="btn-primary" style={{ fontSize: 13, padding: '10px 18px' }}>
+        <button onClick={() => setShowCreate(true)} className="btn-primary" style={{ fontSize: 13, padding: '10px 18px' }}>
           + New Announcement
         </button>
       </div>
@@ -79,7 +67,11 @@ export default function AdminAnnouncements() {
       {showCreate && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div className="card-glow" style={{ width: '100%', maxWidth: 500, maxHeight: '90vh', overflowY: 'auto' }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 20 }}>New Announcement</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: '#fff', margin: 0 }}>New Announcement</h2>
+              <button onClick={() => setShowCreate(false)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: 18 }}>✕</button>
+            </div>
+
             <form onSubmit={create}>
               <input
                 value={form.title}
@@ -94,7 +86,7 @@ export default function AdminAnnouncements() {
                 style={{ marginBottom: 12, minHeight: 100, resize: 'vertical' }}
               />
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                 <select value={form.targetDept} onChange={e => setForm(p => ({ ...p, targetDept: e.target.value }))} className="input">
                   <option value="">All Departments</option>
                   {departments.map(d => <option key={d} value={d}>{d}</option>)}
@@ -106,41 +98,22 @@ export default function AdminAnnouncements() {
                 </select>
               </div>
 
-              {/* Start Date */}
-              <label style={{ display: 'block', fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-                📅 Start Date &amp; Time <span style={{ color: '#4b5563' }}>(when it becomes visible)</span>
-              </label>
-              <input
-                type="datetime-local"
-                value={form.publishAt}
-                onChange={e => setForm(p => ({ ...p, publishAt: e.target.value }))}
-                className="input"
-                style={{ marginBottom: 12 }}
-              />
-
-              {/* End / Expiry Date */}
-              <label style={{ display: 'block', fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-                ⏳ End Date &amp; Time <span style={{ color: '#4b5563' }}>(when it auto-hides — optional)</span>
-              </label>
-              <input
-                type="datetime-local"
-                value={form.expiresAt}
-                onChange={e => setForm(p => ({ ...p, expiresAt: e.target.value }))}
-                className="input"
-                style={{ marginBottom: 16 }}
-              />
-
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 20 }}>
                 <input type="checkbox" checked={form.pinned} onChange={e => setForm(p => ({ ...p, pinned: e.target.checked }))}
                   style={{ accentColor: '#39ff14', width: 16, height: 16 }} />
-                <span style={{ fontSize: 13, color: '#d1d5db' }}>📌 Pin this announcement (stays at top)</span>
+                <span style={{ fontSize: 13, color: '#d1d5db' }}>📌 Pin this announcement</span>
               </label>
+
+              {/* Info note */}
+              <div style={{ background: 'rgba(57,255,20,0.05)', border: '1px solid rgba(57,255,20,0.15)', borderRadius: 8, padding: '10px 14px', marginBottom: 18, fontSize: 12, color: '#9ca3af' }}>
+                ⚡ Posts instantly · Emails sent to {form.targetDept ? form.targetDept : 'all'} employees
+              </div>
 
               <div style={{ display: 'flex', gap: 12 }}>
                 <button type="submit" disabled={creating} className="btn-primary" style={{ flex: 1 }}>
                   {creating
                     ? <span className="animate-spin" style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid #000', borderTopColor: 'transparent', borderRadius: '50%' }} />
-                    : '📢 Post'}
+                    : '📢 Post Now'}
                 </button>
                 <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
               </div>
@@ -162,8 +135,8 @@ export default function AdminAnnouncements() {
             )
             : items.map(ann => {
               const annId = ann._id || ann.id;
-              const pc = priorityColor[ann.priority] || '#39ff14';
-              const pl = priorityLabel[ann.priority] || ann.priority;
+              const pc    = priorityColor[ann.priority] || '#39ff14';
+              const pl    = priorityLabel[ann.priority] || ann.priority;
               return (
                 <div key={annId} className="card" style={{ marginBottom: 12, border: ann.pinned ? '1px solid rgba(245,230,66,0.3)' : '1px solid #1f1f1f' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
@@ -179,25 +152,18 @@ export default function AdminAnnouncements() {
                       <p style={{ color: '#9ca3af', fontSize: 13, lineHeight: 1.5 }}>{ann.body}</p>
                       <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: 11, color: '#6b7280', flexWrap: 'wrap' }}>
                         <span>
-                          📅 Start: {new Date(ann.publishAt || ann.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          🕐 {new Date(ann.publishAt || ann.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        {ann.expiresAt && (
-                          <span style={{ color: '#f87171' }}>
-                            ⏳ Ends: {new Date(ann.expiresAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        )}
                         <span>👁 {ann.readBy?.length || 0} read</span>
                       </div>
                     </div>
                     <button
                       onClick={() => del(ann)}
-                      title="Delete announcement"
-                      style={{ background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer', fontSize: 18, flexShrink: 0, padding: '4px 6px', borderRadius: 6, transition: 'color 0.15s' }}
+                      title="Delete"
+                      style={{ background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer', fontSize: 18, flexShrink: 0, padding: '4px 6px', borderRadius: 6 }}
                       onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
                       onMouseLeave={e => e.currentTarget.style.color = '#4b5563'}
-                    >
-                      🗑
-                    </button>
+                    >🗑</button>
                   </div>
                 </div>
               );
