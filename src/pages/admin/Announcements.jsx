@@ -6,6 +6,14 @@ export default function AdminAnnouncements() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+
+  // Helper: get current local datetime string for datetime-local input
+  const nowLocalStr = () => {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    return now.toISOString().slice(0, 16);
+  };
+
   const [form, setForm] = useState({
     title: '', body: '', targetDept: '', pinned: false,
     priority: 'GENERAL', publishAt: '', expiresAt: '',
@@ -30,7 +38,7 @@ export default function AdminAnnouncements() {
       const res = await api.post('/announcements', payload);
       setItems(prev => [res.data, ...prev]);
       setShowCreate(false);
-      setForm({ title: '', body: '', targetDept: '', pinned: false, priority: 'GENERAL', publishAt: '', expiresAt: '' });
+      setForm({ title: '', body: '', targetDept: '', pinned: false, priority: 'GENERAL', publishAt: nowLocalStr(), expiresAt: '' });
       toast.success('Announcement posted!');
     } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
     finally { setCreating(false); }
@@ -59,7 +67,10 @@ export default function AdminAnnouncements() {
           <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 4 }}>Announcements</h1>
           <p style={{ fontSize: 13, color: '#6b7280' }}>Broadcast messages to your team</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn-primary" style={{ fontSize: 13, padding: '10px 18px' }}>
+        <button onClick={() => {
+          setForm({ title: '', body: '', targetDept: '', pinned: false, priority: 'GENERAL', publishAt: nowLocalStr(), expiresAt: '' });
+          setShowCreate(true);
+        }} className="btn-primary" style={{ fontSize: 13, padding: '10px 18px' }}>
           + New Announcement
         </button>
       </div>
