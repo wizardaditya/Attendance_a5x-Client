@@ -17,8 +17,8 @@ export default function FounderTasks() {
   const [loading,     setLoading]     = useState(true);
   const [filter,      setFilter]      = useState('all');
   const [showCreate,  setShowCreate]  = useState(false);
-  const [shareTask,   setShareTask]   = useState(null); // task being shared
-  const [shareForm,   setShareForm]   = useState({ founderId:'', note:'', assign: false });
+  const [shareTask,   setShareTask]   = useState(null);
+  const [shareForm,   setShareForm]   = useState({ selectedIds: [], note: '', assignTo: '' });
   const [form,        setForm]        = useState(INIT_FORM);
   const [saving,      setSaving]      = useState(false);
 
@@ -90,19 +90,37 @@ export default function FounderTasks() {
 
   const handleShare = async (e) => {
     e.preventDefault();
-    if (!shareForm.founderId) return toast.error('Select a founder');
+    if (shareForm.selectedIds.length === 0) return toast.error('Select at least one founder');
     const id = shareTask._id || shareTask.id;
+    setSaving(true);
     try {
-      const res = await api.post(`/founder/tasks/${id}/share`, {
-        founderId:  shareForm.founderId,
-        assignedTo: shareForm.assign ? shareForm.founderId : undefined,
-        note:       shareForm.note,
-      });
-      setTasks(prev => prev.map(t => (t._id || t.id) === id ? res.data : t));
+      // Share with each selected founder one by one
+      let lastRes = null;
+      for (const fid of shareForm.selectedIds) {
+        const res = await api.post(`/founder/tasks/${id}/share`, {
+          targetId:   fid,
+          assignedTo: shareForm.assignTo === fid ? fid : undefined,
+          note:       shareForm.note,
+        });
+        lastRes = res;
+      }
+      if (lastRes) setTasks(prev => prev.map(t => (t._id || t.id) === id ? lastRes.data : t));
       setShareTask(null);
-      setShareForm({ founderId:'', note:'', assign: false });
-      toast.success('Task shared!');
+      setShareForm({ selectedIds: [], note: '', assignTo: '' });
+      toast.success(`Task shared with ${shareForm.selectedIds.length} founder${shareForm.selectedIds.length > 1 ? 's' : ''}!`);
     } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
+    finally { setSaving(false); }
+  };
+
+  const toggleFounder = (fid) => {
+    setShareForm(p => ({
+      ...p,
+      selectedIds: p.selectedIds.includes(fid)
+        ? p.selectedIds.filter(id => id !== fid)
+        : [...p.selectedIds, fid],
+      // reset assignTo if that founder was deselected
+      assignTo: p.assignTo === fid && p.selectedIds.includes(fid) ? '' : p.assignTo,
+    }));
   };
 
   return (
@@ -212,28 +230,106 @@ export default function FounderTasks() {
       {/* Share Modal */}
       {shareTask && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-          <div className="card-glow" style={{ width:'100%', maxWidth:400 }}>
-            <h2 style={{ fontSize:16, fontWeight:700, color:'#fff', marginBottom:4 }}>Share Task</h2>
-            <p style={{ fontSize:12, color:'#f5e642', marginBottom:20 }}>"{shareTask.title}"</p>
+          <div className="card-glow" style={{ width:'100%', maxWidth:440, maxHeight:'90vh', overflowY:'auto' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+              <h2 style={{ fontSize:16, fontWeight:700, color:'#fff' }}>Share Task</h2>
+              <button onClick={() => setShareTask(null)} style={{ background:'none', border:'none', color:'#6b7280', cursor:'pointer', fontSize:18 }}>✕</button>
+            </div>
+            <p style={{ fontSize:12, color:'#f5e642', marginBottom:18 }}>"{shareTask.title}"</p>
+
             <form onSubmit={handleShare}>
-              <div style={{ marginBottom:14 }}>
-                <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>Share with Founder *</label>
-                <select value={shareForm.founderId} onChange={e => setShareForm(p => ({ ...p, founderId:e.target.value }))} className="input" required>
-                  <option value="">Select founder...</option>
-                  {founders.map(f => <option key={f._id || f.id} value={f._id || f.id}>{f.name} — {f.designation}</option>)}
-                </select>
-              </div>
-              <div style={{ marginBottom:14 }}>
-                <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>Note / Message</label>
-                <textarea value={shareForm.note} onChange={e => setShareForm(p => ({ ...p, note:e.target.value }))} className="input" placeholder="Add a note for them..." style={{ minHeight:60, resize:'none' }} />
-              </div>
-              <label style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16, cursor:'pointer' }}>
-                <input type="checkbox" checked={shareForm.assign} onChange={e => setShareForm(p => ({ ...p, assign:e.target.checked }))} style={{ accentColor:'#f5e642', width:15, height:15 }} />
-                <span style={{ fontSize:13, color:'#d1d5db' }}>Assign this task to them</span>
+              {/* Multi-select founders */}
+              <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:8 }}>
+                Select Founders <span style={{ color:'#6b7280' }}>(select one or more)</span>
               </label>
+              <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:14, maxHeight:220, overflowY:'auto', paddingRight:4 }}>
+                {founders.length === 0 ? (
+                  <p style={{ color:'#6b7280', fontSize:12 }}>No other founders found</p>
+                ) : founders.map(f => {
+                  const fid = f._id || f.id;
+                  const isSelected = shareForm.selectedIds.includes(fid);
+                  return (
+                    <div key={fid}
+                      onClick={() => toggleFounder(fid)}
+                      style={{
+                        display:'flex', alignItems:'center', gap:10,
+                        padding:'10px 12px', borderRadius:10, cursor:'pointer',
+                        background: isSelected ? 'rgba(245,230,66,0.08)' : '#0a0a0a',
+                        border: isSelected ? '1px solid rgba(245,230,66,0.4)' : '1px solid #1f1f1f',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {/* Checkbox visual */}
+                      <div style={{
+                        width:18, height:18, borderRadius:5, border: isSelected ? '2px solid #f5e642' : '2px solid #3a3a3a',
+                        background: isSelected ? '#f5e642' : 'transparent',
+                        display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+                        transition:'all 0.15s',
+                      }}>
+                        {isSelected && <span style={{ color:'#000', fontSize:11, fontWeight:900 }}>✓</span>}
+                      </div>
+
+                      <div style={{ width:30, height:30, borderRadius:'50%', background:'rgba(245,230,66,0.15)', display:'flex', alignItems:'center', justifyContent:'center', color:'#f5e642', fontWeight:700, fontSize:12, flexShrink:0 }}>
+                        {f.name[0]}
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <p style={{ fontSize:13, color:'#fff', fontWeight:500 }}>{f.name}</p>
+                        <p style={{ fontSize:10, color:'#6b7280' }}>{f.designation}</p>
+                      </div>
+
+                      {/* Assign radio — only show if selected */}
+                      {isSelected && (
+                        <div
+                          onClick={ev => { ev.stopPropagation(); setShareForm(p => ({ ...p, assignTo: p.assignTo === fid ? '' : fid })); }}
+                          title="Mark as assigned to this founder"
+                          style={{
+                            fontSize:10, padding:'2px 8px', borderRadius:999, cursor:'pointer', flexShrink:0,
+                            background: shareForm.assignTo === fid ? 'rgba(57,255,20,0.15)' : '#1a1a1a',
+                            border: shareForm.assignTo === fid ? '1px solid rgba(57,255,20,0.4)' : '1px solid #2a2a2a',
+                            color: shareForm.assignTo === fid ? '#39ff14' : '#6b7280',
+                          }}
+                        >
+                          📌 Assign
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Selected summary */}
+              {shareForm.selectedIds.length > 0 && (
+                <div style={{ background:'rgba(245,230,66,0.05)', border:'1px solid rgba(245,230,66,0.15)', borderRadius:8, padding:'8px 12px', marginBottom:12, fontSize:12 }}>
+                  <span style={{ color:'#f5e642', fontWeight:600 }}>{shareForm.selectedIds.length}</span>
+                  <span style={{ color:'#9ca3af' }}> founder{shareForm.selectedIds.length > 1 ? 's' : ''} selected</span>
+                  {shareForm.assignTo && (
+                    <span style={{ color:'#39ff14' }}>
+                      {' · '}📌 Assigned to {founders.find(f => (f._id || f.id) === shareForm.assignTo)?.name}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Note */}
+              <label style={{ display:'block', fontSize:12, color:'#9ca3af', marginBottom:6 }}>Note / Message</label>
+              <textarea
+                value={shareForm.note}
+                onChange={e => setShareForm(p => ({ ...p, note:e.target.value }))}
+                className="input"
+                placeholder="Add a note for them..."
+                style={{ minHeight:60, resize:'none', marginBottom:18 }}
+              />
+
               <div style={{ display:'flex', gap:12 }}>
-                <button type="submit" className="btn-primary" style={{ flex:1, background:'#f5e642', color:'#000', fontSize:13 }}>📤 Share</button>
-                <button type="button" onClick={() => setShareTask(null)} className="btn-secondary" style={{ flex:1, fontSize:13 }}>Cancel</button>
+                <button
+                  type="submit"
+                  disabled={saving || shareForm.selectedIds.length === 0}
+                  className="btn-primary"
+                  style={{ flex:1, background: shareForm.selectedIds.length > 0 ? '#f5e642' : '#2a2a2a', color: shareForm.selectedIds.length > 0 ? '#000' : '#6b7280', fontSize:13 }}
+                >
+                  {saving ? '...' : `📤 Share${shareForm.selectedIds.length > 1 ? ` (${shareForm.selectedIds.length})` : ''}`}
+                </button>
+                <button type="button" onClick={() => { setShareTask(null); setShareForm({ selectedIds:[], note:'', assignTo:'' }); }} className="btn-secondary" style={{ flex:1, fontSize:13 }}>Cancel</button>
               </div>
             </form>
           </div>
