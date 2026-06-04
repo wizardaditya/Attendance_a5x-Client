@@ -23,7 +23,7 @@ export default function FounderTasks() {
   const [saving,      setSaving]      = useState(false);
 
   const loadTasks = () => {
-    api.get('/founder/tasks').then(r => setTasks(r.data)).catch(() => {}).finally(() => setLoading(false));
+    api.get('/founder/tasks?mine=true').then(r => setTasks(r.data)).catch(() => {}).finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -50,9 +50,8 @@ export default function FounderTasks() {
   };
 
   const filtered = tasks.filter(t => {
-    const mine = isOwner(t);
-    if (filter === 'mine')    return mine;
-    if (filter === 'shared')  return t.isShared && !mine; // shared WITH me, not by me
+    if (filter === 'mine')    return true; // all tasks here are mine (mine=true from API)
+    if (filter === 'shared')  return t.isShared;
     if (filter === 'done')    return t.status === 'DONE';
     if (filter === 'pending') return t.status !== 'DONE';
     return true; // 'all'
