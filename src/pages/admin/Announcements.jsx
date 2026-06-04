@@ -18,10 +18,16 @@ export default function AdminAnnouncements() {
     api.get('/users/departments').then(r => setDepartments(r.data)).catch(() => {});
   }, []);
 
+  // ── fix: empty string → null for optional date fields
   const create = async (e) => {
     e.preventDefault(); setCreating(true);
     try {
-      const res = await api.post('/announcements', form);
+      const payload = {
+        ...form,
+        publishAt: form.publishAt || null,
+        expiresAt: form.expiresAt || null,
+      };
+      const res = await api.post('/announcements', payload);
       setItems(prev => [res.data, ...prev]);
       setShowCreate(false);
       setForm({ title: '', body: '', targetDept: '', pinned: false, priority: 'GENERAL', publishAt: '', expiresAt: '' });
