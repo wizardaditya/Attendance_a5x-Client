@@ -8,7 +8,8 @@ const NAV = [
   { to: '/founder/tasks',      label: 'My Tasks',      icon: '✅' },
   { to: '/founder/team',       label: 'Founders Team', icon: '👥' },
   { to: '/founder/attendance', label: 'Attendance',    icon: '📅' },
-  { to: '/founder/employees',  label: 'Employees',     icon: '🧑‍�' },
+  { to: '/founder/employees',  label: 'Employees',     icon: '🧑‍💼' },
+  { to: '/founder/settings',   label: 'Settings',      icon: '⚙️' },
 ];
 
 function LiveTime() {

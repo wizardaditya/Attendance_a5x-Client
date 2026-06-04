@@ -10,6 +10,7 @@ import EmployeeDashboard from './pages/employee/Dashboard';
 import EmployeeTasks from './pages/employee/Tasks';
 import EmployeeAttendance from './pages/employee/Attendance';
 import EmployeeProfile from './pages/employee/Profile';
+import EmployeeSettings from './pages/employee/Settings';
 
 import FounderLayout from './layouts/FounderLayout';
 import FounderOverview from './pages/founder/Overview';
@@ -17,6 +18,7 @@ import FounderTasks from './pages/founder/FounderTasks';
 import FounderTeam from './pages/founder/FounderTeam';
 import FounderAttendance from './pages/founder/FounderAttendance';
 import FounderEmployees from './pages/founder/FounderEmployees';
+import FounderSettings from './pages/founder/FounderSettings';
 
 import AdminLayout from './layouts/AdminLayout';
 import AdminHome from './pages/admin/Home';
@@ -75,6 +77,7 @@ function AppRoutes() {
         <Route path="tasks" element={<EmployeeTasks />} />
         <Route path="attendance" element={<EmployeeAttendance />} />
         <Route path="profile" element={<EmployeeProfile />} />
+        <Route path="settings" element={<EmployeeSettings />} />
       </Route>
 
       <Route path="/founder" element={<ProtectedRoute founderOnly><FounderLayout /></ProtectedRoute>}>
@@ -83,6 +86,7 @@ function AppRoutes() {
         <Route path="team" element={<FounderTeam />} />
         <Route path="attendance" element={<FounderAttendance />} />
         <Route path="employees" element={<FounderEmployees />} />
+        <Route path="settings" element={<FounderSettings />} />
       </Route>
 
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>

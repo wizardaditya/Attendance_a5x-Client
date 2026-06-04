@@ -7,6 +7,7 @@ const TABS = [
   { to: '/employee/tasks',      label: 'Tasks',      icon: '📋' },
   { to: '/employee/attendance', label: 'Attendance', icon: '📅' },
   { to: '/employee/profile',    label: 'Profile',    icon: '👤' },
+  { to: '/employee/settings',   label: 'Settings',   icon: '⚙️' },
 ];
 
 export default function EmployeeLayout() {
