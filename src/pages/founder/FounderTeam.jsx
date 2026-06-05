@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 const PRI_ICONS   = { URGENT: '🔴', HIGH: '🟠', MEDIUM: '🟡', LOW: '🟢' };
 const STATUS_LABELS = { TODO: 'To Do', IN_PROGRESS: 'In Progress', DONE: 'Done' };
 const STATUS_BADGE  = { TODO: 'badge-gray', IN_PROGRESS: 'badge-yellow', DONE: 'badge-green' };
+const INIT_FORM = { title:'', description:'', priority:'MEDIUM', dueDate:'', note:'' };
 
 export default function FounderTeam() {
   const { user } = useAuth();
@@ -15,6 +16,11 @@ export default function FounderTeam() {
   const [allUsers,      setAllUsers]      = useState([]);
   const [tab,           setTab]           = useState('pulse');
   const [loading,       setLoading]       = useState(true);
+
+  // Create task
+  const [showCreate, setShowCreate] = useState(false);
+  const [form,       setForm]       = useState(INIT_FORM);
+  const [saving,     setSaving]     = useState(false);
 
   // Founder drawer — click on a founder to see their tasks
   const [drawerFounder, setDrawerFounder] = useState(null); // { id, name, designation }
@@ -55,12 +61,31 @@ export default function FounderTeam() {
 
   const founders = pulse?.founders || [];
 
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post('/founder/tasks', form);
+      loadShared();
+      setShowCreate(false);
+      setForm(INIT_FORM);
+      toast.success('Task created!');
+    } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
+    finally { setSaving(false); }
+  };
+
   return (
     <div>
       {/* ── Header ── */}
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 4 }}>Founders Team</h1>
-        <p style={{ fontSize: 13, color: '#6b7280' }}>{founders.length} founders · shared workspace</p>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom: 20 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 4 }}>Founders Team</h1>
+          <p style={{ fontSize: 13, color: '#6b7280' }}>{founders.length} founders · shared workspace</p>
+        </div>
+        <button onClick={() => setShowCreate(true)} style={{
+          padding:'10px 18px', borderRadius:10, fontSize:13, fontWeight:700,
+          background:'#f5e642', color:'#000', border:'none', cursor:'pointer',
+        }}>+ Create Task</button>
       </div>
 
       {/* ── Tabs ── */}
@@ -232,6 +257,37 @@ export default function FounderTeam() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════
+          CREATE TASK MODAL
+      ══════════════════════════════════════════ */}
+      {showCreate && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div className="card-glow" style={{ width:'100%', maxWidth:440 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+              <h2 style={{ fontSize:16, fontWeight:700, color:'#fff' }}>Create New Task</h2>
+              <button onClick={() => setShowCreate(false)} style={{ background:'none', border:'none', color:'#6b7280', cursor:'pointer', fontSize:20 }}>✕</button>
+            </div>
+            <form onSubmit={handleCreate}>
+              <input value={form.title} onChange={e => setForm(p => ({ ...p, title:e.target.value }))} className="input" placeholder="Task title *" required style={{ marginBottom:12 }} />
+              <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description:e.target.value }))} className="input" placeholder="Description (optional)" style={{ marginBottom:12, minHeight:60, resize:'none' }} />
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+                <select value={form.priority} onChange={e => setForm(p => ({ ...p, priority:e.target.value }))} className="input">
+                  {['URGENT','HIGH','MEDIUM','LOW'].map(p => <option key={p} value={p}>{PRI_ICONS[p]} {p}</option>)}
+                </select>
+                <input type="date" value={form.dueDate} onChange={e => setForm(p => ({ ...p, dueDate:e.target.value }))} className="input" />
+              </div>
+              <input value={form.note} onChange={e => setForm(p => ({ ...p, note:e.target.value }))} className="input" placeholder="Note (optional)" style={{ marginBottom:16 }} />
+              <div style={{ display:'flex', gap:12 }}>
+                <button type="submit" disabled={saving} className="btn-primary" style={{ flex:1, background:'#f5e642', color:'#000' }}>
+                  {saving ? '...' : '+ Create Task'}
+                </button>
+                <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary" style={{ flex:1 }}>Cancel</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

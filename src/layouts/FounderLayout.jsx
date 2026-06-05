@@ -5,12 +5,13 @@ import toast from 'react-hot-toast';
 import socket from '../lib/socket';
 
 const NAV = [
-  { to: '/founder',            label: 'Overview',      icon: '📊', end: true },
-  { to: '/founder/tasks',      label: 'My Tasks',      icon: '✅' },
-  { to: '/founder/team',       label: 'Founders Team', icon: '👥' },
-  { to: '/founder/attendance', label: 'Attendance',    icon: '📅' },
-  { to: '/founder/employees',  label: 'Employees',     icon: '🧑‍💼' },
-  { to: '/founder/settings',   label: 'Settings',      icon: '⚙️' },
+  { to: '/founder',               label: 'Overview',      icon: '📊', end: true },
+  { to: '/founder/tasks',         label: 'My Tasks',      icon: '✅' },
+  { to: '/founder/team',          label: 'Founders Team', icon: '👥' },
+  { to: '/founder/announcements', label: 'Announcements', icon: '📢' },
+  { to: '/founder/attendance',    label: 'Attendance',    icon: '📅' },
+  { to: '/founder/employees',     label: 'Employees',     icon: '🧑‍💼' },
+  { to: '/founder/settings',      label: 'Settings',      icon: '⚙️' },
 ];
 
 function LiveTime() {

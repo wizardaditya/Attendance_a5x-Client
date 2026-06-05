@@ -19,6 +19,7 @@ import FounderTeam from './pages/founder/FounderTeam';
 import FounderAttendance from './pages/founder/FounderAttendance';
 import FounderEmployees from './pages/founder/FounderEmployees';
 import FounderSettings from './pages/founder/FounderSettings';
+import FounderAnnouncements from './pages/founder/FounderAnnouncements';
 
 import AdminLayout from './layouts/AdminLayout';
 import AdminHome from './pages/admin/Home';
@@ -84,6 +85,7 @@ function AppRoutes() {
         <Route index element={<FounderOverview />} />
         <Route path="tasks" element={<FounderTasks />} />
         <Route path="team" element={<FounderTeam />} />
+        <Route path="announcements" element={<FounderAnnouncements />} />
         <Route path="attendance" element={<FounderAttendance />} />
         <Route path="employees" element={<FounderEmployees />} />
         <Route path="settings" element={<FounderSettings />} />
