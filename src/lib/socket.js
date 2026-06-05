@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const PROD_API = 'https://attendance-a5x-server.onrender.com';
+const PROD_API = 'https://attendance-a5x-server-1.onrender.com';
 const SERVER_URL = import.meta.env.VITE_API_URL
   || (import.meta.env.MODE === 'production' ? PROD_API : 'http://localhost:3001');
 
