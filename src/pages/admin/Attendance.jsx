@@ -92,12 +92,12 @@ export default function AdminAttendance() {
                 <td style={{ padding:'12px 16px', color:'#9ca3af' }}>{r.date}</td>
                 <td style={{ padding:'12px 16px', color:'#39ff14' }}>
                   {editId === rowId
-                    ? <input type="time" defaultValue={r.checkIn ? new Date(r.checkIn).toTimeString().slice(0,5) : ''} onChange={e => setEditData(p => ({ ...p, checkIn:e.target.value }))} className="input" style={{ padding:'4px 8px', fontSize:12, width:110 }} />
+                    ? <input type="time" value={editData.checkIn ?? (r.checkIn ? new Date(r.checkIn).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'Asia/Kolkata' }).slice(0,5) : '')} onChange={e => setEditData(p => ({ ...p, checkIn:e.target.value }))} className="input" style={{ padding:'4px 8px', fontSize:12, width:110 }} />
                     : r.checkIn ? new Date(r.checkIn).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : '—'}
                 </td>
                 <td style={{ padding:'12px 16px', color:'#9ca3af' }}>
                   {editId === rowId
-                    ? <input type="time" defaultValue={r.checkOut ? new Date(r.checkOut).toTimeString().slice(0,5) : ''} onChange={e => setEditData(p => ({ ...p, checkOut:e.target.value }))} className="input" style={{ padding:'4px 8px', fontSize:12, width:110 }} />
+                    ? <input type="time" value={editData.checkOut ?? (r.checkOut ? new Date(r.checkOut).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'Asia/Kolkata' }).slice(0,5) : '')} onChange={e => setEditData(p => ({ ...p, checkOut:e.target.value }))} className="input" style={{ padding:'4px 8px', fontSize:12, width:110 }} />
                     : r.checkOut ? new Date(r.checkOut).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : '—'}
                 </td>
                 <td style={{ padding:'12px 16px', color:'#9ca3af' }}>{r.duration ? `${Math.floor(r.duration/60)}h ${r.duration%60}m` : '—'}</td>
